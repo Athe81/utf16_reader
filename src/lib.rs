@@ -1,5 +1,8 @@
 //! Easy way to read UTF16 encoded files
 
+#![feature(test)]
+extern crate test;
+
 use std::io::Read;
 
 /// Decodes a Reader with UTF16 data to a String
@@ -33,6 +36,8 @@ pub fn read_to_string<R: Read>(source: R) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
+    use std::fs;
     use std::fs::File;
 
     #[test]
@@ -47,5 +52,22 @@ mod tests {
         let f = File::open("test_files/test_le.txt").unwrap();
         let s = read_to_string(f);
         assert_eq!("This is a test", s);
+    }
+
+    #[bench]
+    fn bench_small_text(b: &mut Bencher) {
+        b.iter(|| read_to_string("This is a test".as_bytes()));
+    }
+
+    #[bench]
+    fn bench_medium_text(b: &mut Bencher) {
+        let f = fs::read("test_files/bench_text_medium.txt").unwrap();
+        b.iter(|| read_to_string(f.as_slice()));
+    }
+
+    #[bench]
+    fn bench_large_text(b: &mut Bencher) {
+        let f = fs::read("test_files/bench_text_large.txt").unwrap();
+        b.iter(|| read_to_string(f.as_slice()));
     }
 }
