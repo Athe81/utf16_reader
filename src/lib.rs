@@ -22,10 +22,8 @@ use std::io::Read;
 pub fn read_to_string<R: Read>(source: R) -> String {
     let mut bytes = source.bytes();
 
-    let x: Vec<u8> = bytes.by_ref().take(2).map(|x| x.unwrap()).collect();
-
     let mut i = true; // find endian and use it for tracking
-    if ((x[0] as u16) << 8) + x[1] as u16 == 0xFEFF {
+    if let [Some(Ok(0xFE)), Some(Ok(0xFF))] = [bytes.next(), bytes.next()] {
         i = !i
     };
 
