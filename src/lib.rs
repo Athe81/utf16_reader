@@ -6,29 +6,39 @@ extern crate test;
 use std::io::Read;
 
 /// Decodes a Reader with UTF16 data to a String
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// use std::fs::File;
 /// use std::io::BufReader;
-/// 
+///
 /// let f = File::open("test_files/test_be.txt").unwrap();
 /// let r = BufReader::new(f);
 /// let s = utf16_reader::read_to_string(r);
-/// 
+///
 /// println!("{}", s);
 /// ```
 pub fn read_to_string<R: Read>(source: R) -> String {
     let mut bytes = source.bytes();
-    
-    let x: Vec<u8> = bytes.by_ref().take(2).map(|x|x.unwrap()).collect();
-    
-    let mut i = true;
-    if ((x[0] as u16) << 8) + x[1] as u16 == 0xFEFF { i = !i };
-    
-    let (hs, ls): (Vec<u8>, Vec<u8>) = bytes.map(|x| x.unwrap()).partition(|_| {i=!i; i});
-    let c: Vec<u16> = ls.iter().zip(hs.iter()).map(|(ls, hs)| ((*hs as u16)<<8) + *ls as u16).collect();
+
+    let x: Vec<u8> = bytes.by_ref().take(2).map(|x| x.unwrap()).collect();
+
+    let mut i = true; // find endian and use it for tracking
+    if ((x[0] as u16) << 8) + x[1] as u16 == 0xFEFF {
+        i = !i
+    };
+
+    let mut c = Vec::new();
+    let mut b = 0u16;
+    bytes.map(|x| x.unwrap() as u16).for_each(|x| {
+        if !i {
+            b = x << 8;
+        } else {
+            c.push(b + x);
+        }
+        i = !i;
+    });
 
     String::from_utf16(&c).unwrap()
 }
@@ -36,9 +46,9 @@ pub fn read_to_string<R: Read>(source: R) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::Bencher;
     use std::fs;
     use std::fs::File;
+    use test::Bencher;
 
     #[test]
     fn read_be_test_file() {
